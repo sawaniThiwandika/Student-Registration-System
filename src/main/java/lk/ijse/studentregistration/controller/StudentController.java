@@ -3,23 +3,31 @@ package lk.ijse.studentregistration.controller;
 import jakarta.json.bind.Jsonb;
 import jakarta.json.bind.JsonbBuilder;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.annotation.WebInitParam;
 import jakarta.servlet.annotation.WebServlet;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lk.ijse.studentregistration.data.StudentDTO;
+import lk.ijse.studentregistration.persistance.impl.DataProcess;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
-import static lk.ijse.studentregistration.util.UtilProcess.generateId;
-
-@WebServlet(urlPatterns = "/Student")
+@WebServlet(urlPatterns = "/Student", initParams = {
+        @WebInitParam(name = "driver-class", value = "com.mysql.cj.jdbc.Drive"),
+        @WebInitParam(name = "dbURL", value = "jdbc:mysql://localhost:3306/studentRegistrationSystem"),
+        @WebInitParam(name = "dbUserName", value = "root"),
+        @WebInitParam(name = "dbPassword", value = "1234")
+})
 public class StudentController extends HttpServlet {
+    DataProcess dataProcess = new DataProcess();
     Connection connection;
     static String save_statement = "INSERT INTO student VALUES (?,?,?,?,?)";
     static String getStudent_statement = "SELECT * FROM student WHERE id=?";
@@ -34,6 +42,12 @@ public class StudentController extends HttpServlet {
             var dbURl = getServletContext().getInitParameter("dbURL");
             var dbUserName = getServletContext().getInitParameter("dbUserName");
             var dbPassword = getServletContext().getInitParameter("dbPassword");
+
+            /*var driverClass = getServletConfig().getInitParameter("driver-class");
+            var dbURl = getServletConfig().getInitParameter("dbURL");
+            var dbUserName = getServletConfig().getInitParameter("dbUserName");
+            var dbPassword = getServletConfig().getInitParameter("dbPassword");*/
+
             System.out.println(" after var");
             System.out.println(driverClass);
             Class.forName(driverClass);
@@ -53,8 +67,8 @@ public class StudentController extends HttpServlet {
         //getStudent details
         StudentDTO dto = new StudentDTO();
         String id = req.getParameter("id");
-        try(PrintWriter writer = resp.getWriter()){// best practice writer ek auto close wenw end unama
-            PreparedStatement preparedStatement = connection.prepareStatement(getStudent_statement);
+        try(PrintWriter writer = resp.getWriter()) {// best practice writer ek auto close wenw end unama
+           /* PreparedStatement preparedStatement = connection.prepareStatement(getStudent_statement);
             preparedStatement.setString(1,id);
             ResultSet resultSet= preparedStatement.executeQuery();
             while (resultSet.next()){
@@ -63,13 +77,13 @@ public class StudentController extends HttpServlet {
                 dto.setEmail(resultSet.getString(3));
                 dto.setCity(resultSet.getString(4));
                 dto.setAge(resultSet.getInt(5));
-            }
+            }*/
+
+            dto = dataProcess.getStudent(id, connection);
             resp.setContentType("application/json");// json type response ekk enw kyl kynnn onima ne eth dana eka hodai
             System.out.println(dto);
             Jsonb jsonb = JsonbBuilder.create();// create json object
-            jsonb.toJson(dto,resp.getWriter());// convert to json type (object , response eke writer)
-        } catch (SQLException e) {
-            throw new RuntimeException(e);
+            jsonb.toJson(dto, resp.getWriter());// convert to json type (object , response eke writer)
         }
         ;
 
@@ -115,7 +129,7 @@ public class StudentController extends HttpServlet {
 
         //studentDTO.setId(id);// anith ithuru id kyn property ekt me dan dena value ek dagannw
 
-        for (StudentDTO student : studentList
+       /* for (StudentDTO student : studentList
         ) {
             String id =generateId();
             student.setId(id);
@@ -136,8 +150,14 @@ public class StudentController extends HttpServlet {
             }
 
 
+        }*/
+        PrintWriter writer = resp.getWriter();
+        String saveStudent = dataProcess.saveStudent((ArrayList<StudentDTO>) studentList, connection);
+        if (saveStudent.equals("Saved")) {
+            writer.write("saved successfully");
+        } else {
+            writer.write("can not save");
         }
-
 
 
     }
@@ -153,15 +173,16 @@ public class StudentController extends HttpServlet {
             PreparedStatement preparedStatement = connection.prepareStatement(updateStudent_statement);
             Jsonb jsonb = JsonbBuilder.create();
             StudentDTO updateStudent = jsonb.fromJson(req.getReader(), StudentDTO.class);
+            updateStudent.setId(id);
 
-
-            preparedStatement.setString(5,id);
+            /*preparedStatement.setString(5,id);
             preparedStatement.setString(1,updateStudent.getName());
             preparedStatement.setString(2,updateStudent.getEmail());
             preparedStatement.setString(3,updateStudent.getCity());
             preparedStatement.setInt(4,updateStudent.getAge());
-            int i = preparedStatement.executeUpdate();
-            if(i!=0){
+            int i = preparedStatement.executeUpdate();*/
+            boolean b = dataProcess.updateStudent(updateStudent, connection);
+            if(b){
                 writer.write("update student");
             }
             else {
@@ -181,20 +202,16 @@ public class StudentController extends HttpServlet {
         //delete student
         try(PrintWriter writer = resp.getWriter()) {
             String id = req.getParameter("id");
-            PreparedStatement preparedStatement = connection.prepareStatement(deleteStudent_statement);
-            Jsonb jsonb = JsonbBuilder.create();
+            /*PreparedStatement preparedStatement = connection.prepareStatement(deleteStudent_statement);
             preparedStatement.setString(1,id);
-            int i = preparedStatement.executeUpdate();
-            if(i!=0){
+            int i = preparedStatement.executeUpdate();*/
+            boolean b = dataProcess.deleteStudent(id, connection);
+            if(b){
                writer.write("delete student");
             }
             else {
                 resp.sendError(HttpServletResponse.SC_NO_CONTENT);
             }
-
-        } catch (SQLException e) {
-            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            throw new RuntimeException(e);
 
         }
 
