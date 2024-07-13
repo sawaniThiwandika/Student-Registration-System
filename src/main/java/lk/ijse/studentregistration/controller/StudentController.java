@@ -147,7 +147,7 @@ public class StudentController extends HttpServlet {
 
         //update student
 
-        try {
+        try(PrintWriter writer = resp.getWriter()) {
             StudentDTO dto = new StudentDTO();
             String id = req.getParameter("id");
             PreparedStatement preparedStatement = connection.prepareStatement(updateStudent_statement);
@@ -160,9 +160,16 @@ public class StudentController extends HttpServlet {
             preparedStatement.setString(2,updateStudent.getEmail());
             preparedStatement.setString(3,updateStudent.getCity());
             preparedStatement.setInt(4,updateStudent.getAge());
-            preparedStatement.executeUpdate();
+            int i = preparedStatement.executeUpdate();
+            if(i!=0){
+                writer.write("update student");
+            }
+            else {
+                resp.sendError(HttpServletResponse.SC_NO_CONTENT);
+            }
 
         } catch (SQLException e) {
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             throw new RuntimeException(e);
         }
 
@@ -172,16 +179,23 @@ public class StudentController extends HttpServlet {
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         //delete student
-        try {
-
+        try(PrintWriter writer = resp.getWriter()) {
             String id = req.getParameter("id");
             PreparedStatement preparedStatement = connection.prepareStatement(deleteStudent_statement);
             Jsonb jsonb = JsonbBuilder.create();
             preparedStatement.setString(1,id);
-            preparedStatement.executeUpdate();
+            int i = preparedStatement.executeUpdate();
+            if(i!=0){
+               writer.write("delete student");
+            }
+            else {
+                resp.sendError(HttpServletResponse.SC_NO_CONTENT);
+            }
 
         } catch (SQLException e) {
+            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
             throw new RuntimeException(e);
+
         }
 
 
