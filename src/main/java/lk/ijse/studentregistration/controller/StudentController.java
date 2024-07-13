@@ -80,10 +80,15 @@ public class StudentController extends HttpServlet {
             }*/
 
             dto = dataProcess.getStudent(id, connection);
-            resp.setContentType("application/json");// json type response ekk enw kyl kynnn onima ne eth dana eka hodai
-            System.out.println(dto);
-            Jsonb jsonb = JsonbBuilder.create();// create json object
-            jsonb.toJson(dto, resp.getWriter());// convert to json type (object , response eke writer)
+            if(dto==null){
+                resp.sendError(HttpServletResponse.SC_NO_CONTENT);
+            }
+            else {
+                resp.setContentType("application/json");// json type response ekk enw kyl kynnn onima ne eth dana eka hodai
+                System.out.println(dto);
+                Jsonb jsonb = JsonbBuilder.create();// create json object
+                jsonb.toJson(dto, resp.getWriter());// convert to json type (object , response eke writer)
+            }
         }
         ;
 
@@ -155,8 +160,10 @@ public class StudentController extends HttpServlet {
         String saveStudent = dataProcess.saveStudent((ArrayList<StudentDTO>) studentList, connection);
         if (saveStudent.equals("Saved")) {
             writer.write("saved successfully");
+            resp.setStatus(HttpServletResponse.SC_ACCEPTED);
         } else {
             writer.write("can not save");
+            resp.sendError(HttpServletResponse.SC_NO_CONTENT);
         }
 
 
@@ -170,7 +177,7 @@ public class StudentController extends HttpServlet {
         try(PrintWriter writer = resp.getWriter()) {
             StudentDTO dto = new StudentDTO();
             String id = req.getParameter("id");
-            PreparedStatement preparedStatement = connection.prepareStatement(updateStudent_statement);
+          /*  PreparedStatement preparedStatement = connection.prepareStatement(updateStudent_statement);*/
             Jsonb jsonb = JsonbBuilder.create();
             StudentDTO updateStudent = jsonb.fromJson(req.getReader(), StudentDTO.class);
             updateStudent.setId(id);
@@ -184,14 +191,12 @@ public class StudentController extends HttpServlet {
             boolean b = dataProcess.updateStudent(updateStudent, connection);
             if(b){
                 writer.write("update student");
+                resp.setStatus(HttpServletResponse.SC_ACCEPTED);
             }
             else {
                 resp.sendError(HttpServletResponse.SC_NO_CONTENT);
             }
 
-        } catch (SQLException e) {
-            resp.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-            throw new RuntimeException(e);
         }
 
     }
@@ -207,6 +212,7 @@ public class StudentController extends HttpServlet {
             int i = preparedStatement.executeUpdate();*/
             boolean b = dataProcess.deleteStudent(id, connection);
             if(b){
+                resp.setStatus(HttpServletResponse.SC_ACCEPTED);
                writer.write("delete student");
             }
             else {
