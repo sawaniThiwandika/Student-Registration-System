@@ -16,11 +16,15 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import static lk.ijse.studentregistration.util.UtilProcess.generateId;
+
 @WebServlet(urlPatterns = "/Student")
 public class StudentController extends HttpServlet {
     Connection connection;
     static String save_statement = "INSERT INTO student VALUES (?,?,?,?,?)";
     static String getStudent_statement = "SELECT * FROM student WHERE id=?";
+    static String updateStudent_statement = "UPDATE student SET name=?, email=?, city=?, age=? WHERE id=?";
+    static String deleteStudent_statement = "DELETE FROM student  WHERE id=?";
 
     @Override
     public void init() throws ServletException {
@@ -81,7 +85,7 @@ public class StudentController extends HttpServlet {
 
         //save student
 
-        if (!req.getContentType().toLowerCase().startsWith("application/json") || req.getContentType() == null) {
+        if (!req.getContentType().toLowerCase().startsWith("application/json") || req.getContentType() == null) {//using headers
             resp.sendError(HttpServletResponse.SC_UNSUPPORTED_MEDIA_TYPE);
         }
  /*
@@ -113,7 +117,7 @@ public class StudentController extends HttpServlet {
 
         for (StudentDTO student : studentList
         ) {
-            String id = UUID.randomUUID().toString();
+            String id =generateId();
             student.setId(id);
             System.out.println(student);
 
@@ -142,11 +146,44 @@ public class StudentController extends HttpServlet {
     protected void doPatch(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         //update student
+
+        try {
+            StudentDTO dto = new StudentDTO();
+            String id = req.getParameter("id");
+            PreparedStatement preparedStatement = connection.prepareStatement(updateStudent_statement);
+            Jsonb jsonb = JsonbBuilder.create();
+            StudentDTO updateStudent = jsonb.fromJson(req.getReader(), StudentDTO.class);
+
+
+            preparedStatement.setString(5,id);
+            preparedStatement.setString(1,updateStudent.getName());
+            preparedStatement.setString(2,updateStudent.getEmail());
+            preparedStatement.setString(3,updateStudent.getCity());
+            preparedStatement.setInt(4,updateStudent.getAge());
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
     }
 
     @Override
     protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
 
         //delete student
+        try {
+
+            String id = req.getParameter("id");
+            PreparedStatement preparedStatement = connection.prepareStatement(deleteStudent_statement);
+            Jsonb jsonb = JsonbBuilder.create();
+            preparedStatement.setString(1,id);
+            preparedStatement.executeUpdate();
+
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        }
+
+
     }
 }
